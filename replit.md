@@ -10,6 +10,7 @@ A full-stack Arabic RTL web application for managing building charges, payments,
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `bash scripts/sync-github.sh "message"` — sync app to GitHub (aidemolab/arabic-building-charges-app); never `git push` directly (see `.agents/memory/github-sync.md`)
 - Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — session signing secret
 
 ## Stack
