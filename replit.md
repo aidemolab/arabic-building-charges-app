@@ -49,6 +49,11 @@ A full-stack Arabic RTL web application for managing building charges, payments,
 - Buildings / Units / Persons management with archive support
 - Dashboard: KPI cards, monthly actual vs forecast bar chart, pie chart, per-building table
 
+## Data
+
+- Real client data imported from "Building Charges 2026" workbook (اتحاد الشاغلين أبراج الصفوة): 5 buildings (عمارة 1–4 + المحلات), 291 units, 379 persons, 1,304 actual payments (Jan–Jun 2026), 284 forecasts (Jul–Dec 2026). No demo/seed data remains.
+- See `.agents/memory/safwa-workbook-layout.md` for workbook parsing rules before any re-import.
+
 ## Default credentials
 
 - Username: `admin` / Password: `admin123`

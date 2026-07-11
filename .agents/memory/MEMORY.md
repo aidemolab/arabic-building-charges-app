@@ -1,0 +1,1 @@
+- [Safwa workbook layout](safwa-workbook-layout.md) — client Excel has 4 towers + shops in one sheet with tatweel headers, الإجمالى rows and collection sections to skip; carry-forward unit refs.
