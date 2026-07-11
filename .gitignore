@@ -47,3 +47,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Client data workbooks
+attached_assets/
+*.xlsx
+*.xls
