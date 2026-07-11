@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Building Charges & Payments"
+version = "1.0.0"
+id = "artifacts/building-charges"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22146
+
+[services.development]
+run = "pnpm --filter @workspace/building-charges run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/building-charges", "run", "build" ]
+publicDir = "artifacts/building-charges/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22146"
+BASE_PATH = "/"

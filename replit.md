@@ -1,36 +1,57 @@
-# [Project name]
+# نظام رسوم المبنى — Building Charges & Payments
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A full-stack Arabic RTL web application for managing building charges, payments, and forecasts.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at `/api`)
+- `pnpm --filter @workspace/building-charges run dev` — run the frontend (port 22146, proxied at `/`)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — session signing secret
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React + Vite, Tailwind CSS, shadcn/ui, Recharts, Arabic RTL, Cairo font
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Auth: express-session + connect-pg-simple + bcryptjs
+- Excel: xlsx (import/export)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth for API contract)
+- `lib/api-client-react/src/generated/` — generated hooks and Zod schemas (do not edit)
+- `lib/db/src/schema/` — Drizzle ORM schema (source of truth for DB)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/building-charges/src/pages/` — React pages (login, dashboard, charges, buildings, units, persons, import, audit)
+- `artifacts/building-charges/src/components/` — Layout, AuthGuard, shadcn/ui components
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Contract-first: OpenAPI spec → codegen → typed hooks used by frontend and validated by backend
+- Actual payments = months 1–6 (Jan–Jun 2026), Forecasts = months 7–12 (Jul–Dec 2026), visually separated
+- Session-based auth (no JWT); sessions stored in PostgreSQL via connect-pg-simple
+- Import route accepts flat Excel rows with month columns (jan/feb/…/dec) per unit/person
+- Audit log written on all create/update/cancel/archive operations via auditHelper
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Secure login → Arabic RTL dashboard with charts
+- Charges & Payments page with 6-filter combo (building, month, year, type, status, role)
+- Payment cancellation with reason + audit history
+- Excel import with preview/validation, Excel export with same filters
+- Buildings / Units / Persons management with archive support
+- Dashboard: KPI cards, monthly actual vs forecast bar chart, pie chart, per-building table
+
+## Default credentials
+
+- Username: `admin` / Password: `admin123`
 
 ## User preferences
 
@@ -38,7 +59,10 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm run typecheck:libs` after changing `lib/db/src/schema/` before typechecking artifacts
+- Orval hooks take params directly, NOT wrapped in `{ params: {} }` — e.g. `useListUnits({ buildingId: 1 })`
+- `Charge.type` (not `chargeType`), `ChargeInput.type` (not `chargeType`)
+- connect-pg-simple needs `tableName: "session"` to avoid looking for `table.sql` on disk
 
 ## Pointers
 

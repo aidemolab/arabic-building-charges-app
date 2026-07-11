@@ -1,22 +1,39 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Building Charges & Payments API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: buildings
+    description: Building management
+  - name: units
+    description: Unit management
+  - name: persons
+    description: Owner and tenant management
+  - name: charges
+    description: Payments and forecasts
+  - name: dashboard
+    description: Dashboard summaries
+  - name: import
+    description: Excel import
+  - name: export
+    description: Excel export
+  - name: audit
+    description: Audit trail
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +41,717 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # --- AUTH ---
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+
+  # --- BUILDINGS ---
+  /buildings:
+    get:
+      operationId: listBuildings
+      tags: [buildings]
+      summary: List all buildings
+      responses:
+        "200":
+          description: List of buildings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Building"
+    post:
+      operationId: createBuilding
+      tags: [buildings]
+      summary: Create a building
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuildingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Building"
+
+  /buildings/{id}:
+    get:
+      operationId: getBuilding
+      tags: [buildings]
+      summary: Get a building by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Building found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Building"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateBuilding
+      tags: [buildings]
+      summary: Update a building
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuildingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Building"
+    delete:
+      operationId: archiveBuilding
+      tags: [buildings]
+      summary: Archive a building
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived
+
+  # --- UNITS ---
+  /units:
+    get:
+      operationId: listUnits
+      tags: [units]
+      summary: List units
+      parameters:
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: floor
+          in: query
+          schema:
+            type: integer
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Unit"
+    post:
+      operationId: createUnit
+      tags: [units]
+      summary: Create a unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+
+  /units/{id}:
+    get:
+      operationId: getUnit
+      tags: [units]
+      summary: Get a unit by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unit found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnitDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateUnit
+      tags: [units]
+      summary: Update a unit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+    delete:
+      operationId: archiveUnit
+      tags: [units]
+      summary: Archive a unit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived
+
+  # --- PERSONS ---
+  /persons:
+    get:
+      operationId: listPersons
+      tags: [persons]
+      summary: List persons
+      parameters:
+        - name: unitId
+          in: query
+          schema:
+            type: integer
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [owner, tenant]
+        - name: nameAr
+          in: query
+          schema:
+            type: string
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of persons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Person"
+    post:
+      operationId: createPerson
+      tags: [persons]
+      summary: Create a person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+
+  /persons/{id}:
+    get:
+      operationId: getPerson
+      tags: [persons]
+      summary: Get a person by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Person found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePerson
+      tags: [persons]
+      summary: Update a person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+    delete:
+      operationId: archivePerson
+      tags: [persons]
+      summary: Archive a person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived
+
+  # --- CHARGES ---
+  /charges:
+    get:
+      operationId: listCharges
+      tags: [charges]
+      summary: List charges with filters
+      parameters:
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: unitId
+          in: query
+          schema:
+            type: integer
+        - name: personId
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [actual, forecast]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, paid, cancelled]
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [owner, tenant]
+        - name: nameAr
+          in: query
+          schema:
+            type: string
+        - name: floor
+          in: query
+          schema:
+            type: integer
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of charges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Charge"
+    post:
+      operationId: createCharge
+      tags: [charges]
+      summary: Create a charge record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Charge"
+
+  /charges/{id}:
+    get:
+      operationId: getCharge
+      tags: [charges]
+      summary: Get a charge by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Charge found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Charge"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCharge
+      tags: [charges]
+      summary: Update a charge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Charge"
+
+  /charges/{id}/cancel:
+    post:
+      operationId: cancelCharge
+      tags: [charges]
+      summary: Cancel a charge with reason
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelInput"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Charge"
+
+  # --- DASHBOARD ---
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Overall dashboard summary totals
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Summary data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/monthly:
+    get:
+      operationId: getDashboardMonthly
+      tags: [dashboard]
+      summary: Monthly breakdown of actual vs forecast
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Monthly data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyBreakdown"
+
+  /dashboard/by-building:
+    get:
+      operationId: getDashboardByBuilding
+      tags: [dashboard]
+      summary: Per-building payment summary
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Per-building data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BuildingSummary"
+
+  /dashboard/payment-status:
+    get:
+      operationId: getDashboardPaymentStatus
+      tags: [dashboard]
+      summary: Payment status breakdown for actual months
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payment status breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatusBreakdown"
+
+  # --- IMPORT ---
+  /import/preview:
+    post:
+      operationId: previewImport
+      tags: [import]
+      summary: Parse and preview Excel import without saving
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImportFileInput"
+      responses:
+        "200":
+          description: Preview data with validation results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+
+  /import/commit:
+    post:
+      operationId: commitImport
+      tags: [import]
+      summary: Commit validated import data to database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportCommitInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  # --- EXPORT ---
+  /export/charges:
+    get:
+      operationId: exportCharges
+      tags: [export]
+      summary: Export charges to Excel with filters
+      parameters:
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [actual, forecast]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, paid, cancelled]
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [owner, tenant]
+        - name: floor
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # --- AUDIT ---
+  /audit:
+    get:
+      operationId: listAudit
+      tags: [audit]
+      summary: List audit log entries
+      parameters:
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +762,485 @@ components:
       required:
         - status
 
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, username, role]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+
+    Building:
+      type: object
+      required: [id, nameAr, code]
+      properties:
+        id:
+          type: integer
+        nameAr:
+          type: string
+        code:
+          type: string
+        addressAr:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+
+    BuildingInput:
+      type: object
+      required: [nameAr, code]
+      properties:
+        nameAr:
+          type: string
+        code:
+          type: string
+        addressAr:
+          type: string
+
+    BuildingUpdate:
+      type: object
+      properties:
+        nameAr:
+          type: string
+        code:
+          type: string
+        addressAr:
+          type: string
+
+    Unit:
+      type: object
+      required: [id, buildingId, unitRef]
+      properties:
+        id:
+          type: integer
+        buildingId:
+          type: integer
+        buildingNameAr:
+          type: ["string", "null"]
+        unitRef:
+          type: string
+        floor:
+          type: ["integer", "null"]
+        category:
+          type: ["string", "null"]
+        tier:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+
+    UnitDetail:
+      type: object
+      required: [id, buildingId, unitRef]
+      properties:
+        id:
+          type: integer
+        buildingId:
+          type: integer
+        buildingNameAr:
+          type: ["string", "null"]
+        unitRef:
+          type: string
+        floor:
+          type: ["integer", "null"]
+        category:
+          type: ["string", "null"]
+        tier:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+
+    UnitInput:
+      type: object
+      required: [buildingId, unitRef]
+      properties:
+        buildingId:
+          type: integer
+        unitRef:
+          type: string
+        floor:
+          type: integer
+        category:
+          type: string
+        tier:
+          type: string
+
+    UnitUpdate:
+      type: object
+      properties:
+        unitRef:
+          type: string
+        floor:
+          type: integer
+        category:
+          type: string
+        tier:
+          type: string
+
+    Person:
+      type: object
+      required: [id, nameAr, role, unitId]
+      properties:
+        id:
+          type: integer
+        unitId:
+          type: integer
+        unitRef:
+          type: ["string", "null"]
+        buildingId:
+          type: ["integer", "null"]
+        buildingNameAr:
+          type: ["string", "null"]
+        nameAr:
+          type: string
+        role:
+          type: string
+          enum: [owner, tenant]
+        phone:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+
+    PersonInput:
+      type: object
+      required: [nameAr, role, unitId]
+      properties:
+        nameAr:
+          type: string
+        role:
+          type: string
+          enum: [owner, tenant]
+        unitId:
+          type: integer
+        phone:
+          type: string
+
+    PersonUpdate:
+      type: object
+      properties:
+        nameAr:
+          type: string
+        role:
+          type: string
+          enum: [owner, tenant]
+        phone:
+          type: string
+        unitId:
+          type: integer
+
+    Charge:
+      type: object
+      required: [id, unitId, personId, year, month, amount, type, status]
+      properties:
+        id:
+          type: integer
+        unitId:
+          type: integer
+        unitRef:
+          type: ["string", "null"]
+        buildingId:
+          type: ["integer", "null"]
+        buildingNameAr:
+          type: ["string", "null"]
+        floor:
+          type: ["integer", "null"]
+        personId:
+          type: integer
+        personNameAr:
+          type: ["string", "null"]
+        personRole:
+          type: ["string", "null"]
+        year:
+          type: integer
+        month:
+          type: integer
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [actual, forecast]
+        status:
+          type: string
+          enum: [pending, paid, cancelled]
+        paidAt:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        cancelReason:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+
+    ChargeInput:
+      type: object
+      required: [unitId, personId, year, month, amount, type]
+      properties:
+        unitId:
+          type: integer
+        personId:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [actual, forecast]
+        status:
+          type: string
+          enum: [pending, paid, cancelled]
+        paidAt:
+          type: string
+        notes:
+          type: string
+
+    ChargeUpdate:
+      type: object
+      properties:
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, paid, cancelled]
+        paidAt:
+          type: string
+        notes:
+          type: string
+        type:
+          type: string
+          enum: [actual, forecast]
+
+    CancelInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required: [totalBuildings, totalUnits, totalPersons, totalActualPaid, totalForecast, collectionRate, totalCancelled]
+      properties:
+        totalBuildings:
+          type: integer
+        totalUnits:
+          type: integer
+        totalPersons:
+          type: integer
+        totalActualPaid:
+          type: number
+        totalForecast:
+          type: number
+        totalCancelled:
+          type: number
+        collectionRate:
+          type: number
+        actualMonthsCount:
+          type: integer
+        forecastMonthsCount:
+          type: integer
+
+    MonthlyBreakdown:
+      type: object
+      required: [month, type, totalAmount, paidCount, pendingCount, cancelledCount]
+      properties:
+        month:
+          type: integer
+        type:
+          type: string
+        totalAmount:
+          type: number
+        paidCount:
+          type: integer
+        pendingCount:
+          type: integer
+        cancelledCount:
+          type: integer
+
+    BuildingSummary:
+      type: object
+      required: [buildingId, buildingNameAr, totalUnits, totalActual, totalForecast]
+      properties:
+        buildingId:
+          type: integer
+        buildingNameAr:
+          type: string
+        totalUnits:
+          type: integer
+        totalPersons:
+          type: integer
+        totalActual:
+          type: number
+        totalForecast:
+          type: number
+        collectionRate:
+          type: number
+
+    PaymentStatusBreakdown:
+      type: object
+      required: [paid, pending, cancelled]
+      properties:
+        paid:
+          type: integer
+        pending:
+          type: integer
+        cancelled:
+          type: integer
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+
+    ImportFileInput:
+      type: object
+      properties:
+        filename:
+          type: string
+
+    ImportRow:
+      type: object
+      properties:
+        rowIndex:
+          type: integer
+        floor:
+          type: ["integer", "null"]
+        unitRef:
+          type: string
+        nameAr:
+          type: string
+        role:
+          type: string
+        category:
+          type: ["string", "null"]
+        tier:
+          type: ["string", "null"]
+        jan:
+          type: ["number", "null"]
+        feb:
+          type: ["number", "null"]
+        mar:
+          type: ["number", "null"]
+        apr:
+          type: ["number", "null"]
+        may:
+          type: ["number", "null"]
+        jun:
+          type: ["number", "null"]
+        jul:
+          type: ["number", "null"]
+        aug:
+          type: ["number", "null"]
+        sep:
+          type: ["number", "null"]
+        oct:
+          type: ["number", "null"]
+        nov:
+          type: ["number", "null"]
+        dec:
+          type: ["number", "null"]
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ImportPreview:
+      type: object
+      required: [rows, totalRows, validRows, errorRows]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRow"
+        totalRows:
+          type: integer
+        validRows:
+          type: integer
+        errorRows:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ImportCommitInput:
+      type: object
+      required: [rows, buildingId, year]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRow"
+        buildingId:
+          type: integer
+        year:
+          type: integer
+
+    ImportResult:
+      type: object
+      required: [unitsCreated, personsCreated, chargesCreated, errors]
+      properties:
+        unitsCreated:
+          type: integer
+        personsCreated:
+          type: integer
+        chargesCreated:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    AuditEntry:
+      type: object
+      required: [id, entityType, entityId, action, createdAt]
+      properties:
+        id:
+          type: integer
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        action:
+          type: string
+        oldData:
+          type: ["string", "null"]
+        newData:
+          type: ["string", "null"]
+        userId:
+          type: ["integer", "null"]
+        username:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
