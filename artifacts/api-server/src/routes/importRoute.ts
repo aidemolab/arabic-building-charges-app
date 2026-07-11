@@ -1,11 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import { db, unitsTable, personsTable, chargesTable, buildingsTable } from "@workspace/db";
+import { db, unitsTable, personsTable, chargesTable, buildingsTable, importLogTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logger } from "../lib/logger";
-import { recordAudit } from "./auditHelper";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -144,7 +143,7 @@ router.post("/import/preview", requireAuth, upload.single("file"), async (req, r
 });
 
 router.post("/import/commit", requireAuth, async (req, res) => {
-  const { rows, buildingId, year } = req.body;
+  const { rows, buildingId, year, filename } = req.body;
   if (!rows || !buildingId || !year) { res.status(400).json({ error: "rows, buildingId, year required" }); return; }
 
   const userId = (req.session as any).userId;
@@ -162,14 +161,12 @@ router.post("/import/commit", requireAuth, async (req, res) => {
         if (!unit) {
           [unit] = await db.insert(unitsTable).values({ buildingId, unitRef: row.unitRef, floor: row.floor ?? null, category: row.category || null, tier: row.tier || null }).returning();
           unitsCreated++;
-          await recordAudit({ entityType: "unit", entityId: unit.id, action: "import_create", newData: unit, userId });
         }
 
         let [person] = await db.select().from(personsTable).where(and(eq(personsTable.unitId, unit.id), eq(personsTable.nameAr, row.nameAr), eq(personsTable.role, row.role))).limit(1);
         if (!person) {
           [person] = await db.insert(personsTable).values({ unitId: unit.id, nameAr: row.nameAr, role: row.role }).returning();
           personsCreated++;
-          await recordAudit({ entityType: "person", entityId: person.id, action: "import_create", newData: person, userId });
         }
 
         const monthAmounts: [number, number | null][] = [
@@ -183,9 +180,8 @@ router.post("/import/commit", requireAuth, async (req, res) => {
           const type = ACTUAL_MONTHS.includes(month) ? "actual" : "forecast";
           const existing = await db.select().from(chargesTable).where(and(eq(chargesTable.unitId, unit.id), eq(chargesTable.personId, person.id), eq(chargesTable.year, year), eq(chargesTable.month, month))).limit(1);
           if (existing.length === 0) {
-            const [c] = await db.insert(chargesTable).values({ unitId: unit.id, personId: person.id, year, month, amount: amount.toString(), type, status: type === "actual" ? "paid" : "pending" }).returning();
+            await db.insert(chargesTable).values({ unitId: unit.id, personId: person.id, year, month, amount: amount.toString(), type, status: type === "actual" ? "paid" : "pending" });
             chargesCreated++;
-            await recordAudit({ entityType: "charge", entityId: c.id, action: "import_create", newData: c, userId });
           }
         }
       } catch (rowErr: any) {
@@ -193,6 +189,18 @@ router.post("/import/commit", requireAuth, async (req, res) => {
         errors.push(`صف ${row.rowIndex}: ${rowErr.message}`);
       }
     }
+
+    await db.insert(importLogTable).values({
+      filename: filename ?? null,
+      buildingId,
+      year,
+      unitsCreated,
+      personsCreated,
+      chargesCreated,
+      errorCount: errors.length,
+      userId: userId ?? null,
+      notes: `استيراد ملف Excel — ${building.nameAr}`,
+    });
 
     res.json({ unitsCreated, personsCreated, chargesCreated, errors });
   } catch (err) {

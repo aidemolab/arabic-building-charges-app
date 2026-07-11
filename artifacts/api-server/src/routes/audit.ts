@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, auditLogTable, usersTable } from "@workspace/db";
-import { eq, and, SQL } from "drizzle-orm";
+import { eq, and, ne, SQL } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 
@@ -14,6 +14,7 @@ router.get("/audit", requireAuth, async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
     const conditions: (SQL | undefined)[] = [
+      ne(auditLogTable.action, "import_create"),
       entityType ? eq(auditLogTable.entityType, entityType) : undefined,
       entityId ? eq(auditLogTable.entityId, entityId) : undefined,
       action ? eq(auditLogTable.action, action) : undefined,
@@ -38,7 +39,14 @@ router.get("/audit", requireAuth, async (req, res) => {
       .orderBy(auditLogTable.createdAt)
       .limit(limit);
 
-    res.json(rows.map(r => ({ ...r, oldData: r.oldData ?? null, newData: r.newData ?? null, userId: r.userId ?? null, username: r.username ?? null, notes: r.notes ?? null })));
+    res.json(rows.map(r => ({
+      ...r,
+      oldData: r.oldData ?? null,
+      newData: r.newData ?? null,
+      userId: r.userId ?? null,
+      username: r.username ?? null,
+      notes: r.notes ?? null,
+    })));
   } catch (err) {
     logger.error(err);
     res.status(500).json({ error: "Server error" });
