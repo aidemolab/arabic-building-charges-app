@@ -74,8 +74,7 @@ export default function MasterRecoveryPage() {
       await mutateAsync({ data: { recoveryCode: recoveryCode.trim(), newPassword } });
       toast({
         title: "تمت استعادة حساب المسؤول",
-        description:
-          "تم تعيين كلمة المرور الجديدة بشكل دائم. سجّل الدخول بها الآن مباشرة.",
+        description: "سجّل الدخول الآن بكلمة المرور الجديدة للدخول مباشرةً إلى النظام.",
       });
       setLocation("/login");
     } catch (err) {
@@ -107,8 +106,8 @@ export default function MasterRecoveryPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              أدخل رمز الاستعادة الذي يحتفظ به مالك النظام، ثم اختر كلمة المرور
-              الدائمة الجديدة. ستتمكن من تسجيل الدخول بها مباشرة.
+              أدخل رمز الاستعادة الذي يحتفظ به مالك النظام، ثم اختر كلمة المرور الجديدة.
+              ستدخل إلى النظام مباشرةً بعد تسجيل الدخول بها.
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="recovery-code">رمز الاستعادة</Label>
@@ -124,7 +123,7 @@ export default function MasterRecoveryPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-password">كلمة المرور الدائمة الجديدة</Label>
+              <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
               <Input
                 id="new-password"
                 type="password"

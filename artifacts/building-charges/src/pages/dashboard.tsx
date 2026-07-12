@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell,
 } from "recharts";
 import { ARABIC_MONTHS } from "@/lib/constants";
 import { TrendingUp, Building2, CheckCircle2, XCircle, Percent } from "lucide-react";

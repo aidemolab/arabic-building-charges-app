@@ -136,11 +136,12 @@ router.post("/auth/master-recovery", async (req, res) => {
       return;
     }
 
-    // The owner already chose and confirmed a permanent password on the recovery
-    // page, so make it final immediately: clear must_change_password so the admin
-    // is NOT forced through another change screen at next login. This is distinct
-    // from admin-created temp passwords for ordinary users (users.ts), which keep
-    // must_change_password: true.
+    // The password entered on the recovery page IS the final password chosen by
+    // the owner — NOT a temporary one.  Clearing must_change_password and
+    // recording password_changed_at means AuthGuard lets the admin straight into
+    // the app without another forced-change step.
+    // (The ordinary-user forced-change path in users.ts is untouched — it still
+    // sets must_change_password:true for admin-provisioned temp passwords.)
     const { error: updateErr } = await supabase.auth.admin.updateUserById(supabaseUserId, {
       password: newPassword,
       user_metadata: {
@@ -163,7 +164,7 @@ router.post("/auth/master-recovery", async (req, res) => {
       entityId: localRow?.id ?? 0,
       action: "master_recovery",
       newData: { email: MASTER_ADMIN_EMAIL, note: "master admin password recovered via recovery code" },
-      notes: "Master admin self-recovery from login page; permanent password set (must_change_password cleared)",
+      notes: "Master admin self-recovery from login page; must_change_password cleared; password_changed_at set",
     });
 
     req.log.warn(
