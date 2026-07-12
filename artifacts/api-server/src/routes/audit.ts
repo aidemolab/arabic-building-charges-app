@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, auditLogTable, usersTable } from "@workspace/db";
-import { eq, and, ne, SQL } from "drizzle-orm";
+import { eq, and, ne, desc, SQL } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 
@@ -30,13 +30,14 @@ router.get("/audit", requireAuth, async (req, res) => {
         newData: auditLogTable.newData,
         userId: auditLogTable.userId,
         username: usersTable.username,
+        actorRole: usersTable.role,
         notes: auditLogTable.notes,
         createdAt: auditLogTable.createdAt,
       })
       .from(auditLogTable)
       .leftJoin(usersTable, eq(auditLogTable.userId, usersTable.id))
       .where(and(...conditions) as SQL)
-      .orderBy(auditLogTable.createdAt)
+      .orderBy(desc(auditLogTable.createdAt))
       .limit(limit);
 
     res.json(rows.map(r => ({
@@ -45,6 +46,7 @@ router.get("/audit", requireAuth, async (req, res) => {
       newData: r.newData ?? null,
       userId: r.userId ?? null,
       username: r.username ?? null,
+      actorRole: r.actorRole ?? null,
       notes: r.notes ?? null,
     })));
   } catch (err) {

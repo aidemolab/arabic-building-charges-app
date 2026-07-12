@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Home, Plus, Pencil, Archive, Loader2 } from "lucide-react";
+import { usePermissions } from "@/lib/permissions";
 
 function UnitForm({
   initial,
@@ -55,7 +56,13 @@ function UnitForm({
         </div>
         <div className="space-y-1.5">
           <Label>الفئة</Label>
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="سكني" />
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="سكني">سكني</SelectItem>
+              <SelectItem value="تجاري">تجاري</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label>الدرجة</Label>
@@ -84,6 +91,7 @@ function UnitForm({
 
 export default function UnitsPage() {
   const queryClient = useQueryClient();
+  const { canManageStructure } = usePermissions();
   const [filterBuilding, setFilterBuilding] = useState<string>("all");
   const { data: buildings } = useListBuildings();
   const { data: units, isLoading } = useListUnits(
@@ -116,9 +124,11 @@ export default function UnitsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 ml-2" /> إضافة وحدة
-          </Button>
+          {canManageStructure && (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 ml-2" /> إضافة وحدة
+            </Button>
+          )}
         </div>
       </div>
 
@@ -136,7 +146,7 @@ export default function UnitsPage() {
                     <th className="text-right py-3 px-4 font-medium">الطابق</th>
                     <th className="text-right py-3 px-4 font-medium">الفئة</th>
                     <th className="text-right py-3 px-4 font-medium">الدرجة</th>
-                    <th className="py-3 px-4" />
+                    {canManageStructure && <th className="py-3 px-4" />}
                   </tr>
                 </thead>
                 <tbody>
@@ -149,29 +159,31 @@ export default function UnitsPage() {
                       <td className="py-2.5 px-4">{u.floor ?? "—"}</td>
                       <td className="py-2.5 px-4">{u.category ?? "—"}</td>
                       <td className="py-2.5 px-4">{u.tier ?? "—"}</td>
-                      <td className="py-2.5 px-4">
-                        <div className="flex gap-1 justify-end">
-                          <Button size="sm" variant="ghost" onClick={() => setEditing(u)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              if (confirm("أرشفة الوحدة؟")) {
-                                archiveMutation.mutate({ id: u.id }, { onSuccess: invalidate });
-                              }
-                            }}
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
+                      {canManageStructure && (
+                        <td className="py-2.5 px-4">
+                          <div className="flex gap-1 justify-end">
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(u)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("أرشفة الوحدة؟")) {
+                                  archiveMutation.mutate({ id: u.id }, { onSuccess: invalidate });
+                                }
+                              }}
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {units?.filter((u) => !u.archived).length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-muted-foreground">
+                      <td colSpan={canManageStructure ? 6 : 5} className="text-center py-10 text-muted-foreground">
                         لا توجد وحدات
                       </td>
                     </tr>

@@ -3,7 +3,7 @@ import multer from "multer";
 import * as XLSX from "xlsx";
 import { db, unitsTable, personsTable, chargesTable, buildingsTable, importLogTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -55,7 +55,7 @@ function parseRole(val: string | null): string | null {
   return null;
 }
 
-router.post("/import/preview", requireAuth, upload.single("file"), async (req, res) => {
+router.post("/import/preview", requireAuth, requireRole("admin", "accountant"), upload.single("file"), async (req, res) => {
   try {
     const file = req.file;
     if (!file) { res.status(400).json({ error: "No file uploaded" }); return; }
@@ -142,11 +142,11 @@ router.post("/import/preview", requireAuth, upload.single("file"), async (req, r
   }
 });
 
-router.post("/import/commit", requireAuth, async (req, res) => {
+router.post("/import/commit", requireAuth, requireRole("admin", "accountant"), async (req, res) => {
   const { rows, buildingId, year, filename } = req.body;
   if (!rows || !buildingId || !year) { res.status(400).json({ error: "rows, buildingId, year required" }); return; }
 
-  const userId = (req.session as any).userId;
+  const userId = req.authUser!.id;
   let unitsCreated = 0, personsCreated = 0, chargesCreated = 0;
   const errors: string[] = [];
 

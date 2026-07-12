@@ -17,27 +17,6 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary Login with username and password
- */
-export const LoginBody = zod.object({
-  "username": zod.string(),
-  "password": zod.string()
-})
-
-export const LoginResponse = zod.object({
-  "id": zod.number(),
-  "username": zod.string(),
-  "role": zod.string()
-})
-
-
-/**
- * @summary Logout current session
- */
-export const LogoutResponse = zod.unknown()
-
-
-/**
  * @summary Get current user
  */
 export const GetMeResponse = zod.object({
@@ -45,6 +24,109 @@ export const GetMeResponse = zod.object({
   "username": zod.string(),
   "role": zod.string()
 })
+
+
+/**
+ * @summary List all user accounts
+ */
+export const ListUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "role": zod.enum(['admin', 'accountant', 'viewer']),
+  "disabled": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "passwordChangedAt": zod.string().optional().describe('Effective last password-change timestamp from Supabase user_metadata.password_changed_at, falling back to the account creation time. Absent if the Supabase account could not be resolved.')
+})
+export const ListUsersResponse = zod.array(ListUsersResponseItem)
+
+
+/**
+ * @summary Create a user account (email + temporary password + role)
+ */
+export const createUserBodyPasswordMin = 6;
+
+
+
+export const CreateUserBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(createUserBodyPasswordMin),
+  "role": zod.enum(['admin', 'accountant', 'viewer'])
+})
+
+export const CreateUserResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "role": zod.enum(['admin', 'accountant', 'viewer']),
+  "disabled": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "passwordChangedAt": zod.string().optional().describe('Effective last password-change timestamp from Supabase user_metadata.password_changed_at, falling back to the account creation time. Absent if the Supabase account could not be resolved.')
+})
+
+
+/**
+ * @summary Update a user's role or disabled state
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserBody = zod.object({
+  "role": zod.enum(['admin', 'accountant', 'viewer']).optional(),
+  "disabled": zod.boolean().optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "role": zod.enum(['admin', 'accountant', 'viewer']),
+  "disabled": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "passwordChangedAt": zod.string().optional().describe('Effective last password-change timestamp from Supabase user_metadata.password_changed_at, falling back to the account creation time. Absent if the Supabase account could not be resolved.')
+})
+
+
+/**
+ * @summary Delete a user account
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteUserResponse = zod.unknown()
+
+
+/**
+ * @summary Reset a user's password to a new temporary password (admin only)
+ */
+export const ResetUserPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const resetUserPasswordBodyPasswordMin = 6;
+
+
+
+export const ResetUserPasswordBody = zod.object({
+  "password": zod.string().min(resetUserPasswordBodyPasswordMin)
+})
+
+export const ResetUserPasswordResponse = zod.unknown()
+
+
+/**
+ * @summary Recover the master admin account using an owner recovery code (no auth)
+ */
+
+export const masterRecoveryBodyNewPasswordMin = 8;
+
+
+
+export const MasterRecoveryBody = zod.object({
+  "recoveryCode": zod.string().min(1),
+  "newPassword": zod.string().min(masterRecoveryBodyNewPasswordMin)
+})
+
+export const MasterRecoveryResponse = zod.unknown()
 
 
 /**
@@ -198,6 +280,7 @@ export const GetUnitResponse = zod.object({
   "id": zod.number(),
   "unitId": zod.number(),
   "unitRef": zod.string().nullish(),
+  "floor": zod.number().nullish(),
   "buildingId": zod.number().nullish(),
   "buildingNameAr": zod.string().nullish(),
   "nameAr": zod.string(),
@@ -261,6 +344,7 @@ export const ListPersonsResponseItem = zod.object({
   "id": zod.number(),
   "unitId": zod.number(),
   "unitRef": zod.string().nullish(),
+  "floor": zod.number().nullish(),
   "buildingId": zod.number().nullish(),
   "buildingNameAr": zod.string().nullish(),
   "nameAr": zod.string(),
@@ -286,6 +370,7 @@ export const CreatePersonResponse = zod.object({
   "id": zod.number(),
   "unitId": zod.number(),
   "unitRef": zod.string().nullish(),
+  "floor": zod.number().nullish(),
   "buildingId": zod.number().nullish(),
   "buildingNameAr": zod.string().nullish(),
   "nameAr": zod.string(),
@@ -307,6 +392,7 @@ export const GetPersonResponse = zod.object({
   "id": zod.number(),
   "unitId": zod.number(),
   "unitRef": zod.string().nullish(),
+  "floor": zod.number().nullish(),
   "buildingId": zod.number().nullish(),
   "buildingNameAr": zod.string().nullish(),
   "nameAr": zod.string(),
@@ -335,6 +421,7 @@ export const UpdatePersonResponse = zod.object({
   "id": zod.number(),
   "unitId": zod.number(),
   "unitRef": zod.string().nullish(),
+  "floor": zod.number().nullish(),
   "buildingId": zod.number().nullish(),
   "buildingNameAr": zod.string().nullish(),
   "nameAr": zod.string(),
@@ -549,6 +636,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "totalUnits": zod.number(),
   "totalPersons": zod.number(),
   "totalActualPaid": zod.number(),
+  "totalActualDue": zod.number(),
   "totalForecast": zod.number(),
   "totalCancelled": zod.number(),
   "collectionRate": zod.number(),
@@ -726,6 +814,7 @@ export const ListAuditResponseItem = zod.object({
   "newData": zod.string().nullish(),
   "userId": zod.number().nullish(),
   "username": zod.string().nullish(),
+  "actorRole": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
 })

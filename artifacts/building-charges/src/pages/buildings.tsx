@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Plus, Pencil, Archive, Loader2 } from "lucide-react";
+import { usePermissions } from "@/lib/permissions";
 
 function BuildingForm({
   initial,
@@ -39,7 +40,7 @@ function BuildingForm({
       </div>
       <div className="space-y-1.5">
         <Label>العنوان</Label>
-        <Input value={addressAr} onChange={(e) => setAddressAr(e.target.value)} placeholder="شارع الملك فهد، الرياض" />
+        <Input value={addressAr} onChange={(e) => setAddressAr(e.target.value)} placeholder="شارع التحرير، القاهرة" />
       </div>
       <DialogFooter className="mt-4 gap-2">
         <Button variant="outline" onClick={onCancel}>إلغاء</Button>
@@ -57,6 +58,7 @@ function BuildingForm({
 
 export default function BuildingsPage() {
   const queryClient = useQueryClient();
+  const { canManageStructure } = usePermissions();
   const { data: buildings, isLoading } = useListBuildings();
   const createMutation = useCreateBuilding();
   const updateMutation = useUpdateBuilding();
@@ -89,9 +91,11 @@ export default function BuildingsPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className="h-6 w-6" /> المباني
         </h1>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 ml-2" /> إضافة مبنى
-        </Button>
+        {canManageStructure && (
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 ml-2" /> إضافة مبنى
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -110,15 +114,17 @@ export default function BuildingsPage() {
                 {b.addressAr && (
                   <p className="text-sm text-muted-foreground mb-3">{b.addressAr}</p>
                 )}
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
-                    <Pencil className="h-3.5 w-3.5 ml-1.5" /> تعديل
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleArchive(b.id)}
-                    className="text-muted-foreground hover:text-destructive">
-                    <Archive className="h-3.5 w-3.5 ml-1.5" /> أرشفة
-                  </Button>
-                </div>
+                {canManageStructure && (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
+                      <Pencil className="h-3.5 w-3.5 ml-1.5" /> تعديل
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleArchive(b.id)}
+                      className="text-muted-foreground hover:text-destructive">
+                      <Archive className="h-3.5 w-3.5 ml-1.5" /> أرشفة
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

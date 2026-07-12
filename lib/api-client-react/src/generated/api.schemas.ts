@@ -9,15 +9,71 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface LoginInput {
-  username: string;
-  password: string;
-}
-
 export interface AuthUser {
   id: number;
   username: string;
   role: string;
+}
+
+export type ManagedUserRole = typeof ManagedUserRole[keyof typeof ManagedUserRole];
+
+
+export const ManagedUserRole = {
+  admin: 'admin',
+  accountant: 'accountant',
+  viewer: 'viewer',
+} as const;
+
+export interface ManagedUser {
+  id: number;
+  email: string;
+  role: ManagedUserRole;
+  disabled: boolean;
+  createdAt?: string;
+  /** Effective last password-change timestamp from Supabase user_metadata.password_changed_at, falling back to the account creation time. Absent if the Supabase account could not be resolved. */
+  passwordChangedAt?: string;
+}
+
+export type UserCreateInputRole = typeof UserCreateInputRole[keyof typeof UserCreateInputRole];
+
+
+export const UserCreateInputRole = {
+  admin: 'admin',
+  accountant: 'accountant',
+  viewer: 'viewer',
+} as const;
+
+export interface UserCreateInput {
+  email: string;
+  /** @minLength 6 */
+  password: string;
+  role: UserCreateInputRole;
+}
+
+export type UserUpdateInputRole = typeof UserUpdateInputRole[keyof typeof UserUpdateInputRole];
+
+
+export const UserUpdateInputRole = {
+  admin: 'admin',
+  accountant: 'accountant',
+  viewer: 'viewer',
+} as const;
+
+export interface UserUpdateInput {
+  role?: UserUpdateInputRole;
+  disabled?: boolean;
+}
+
+export interface UserResetPasswordInput {
+  /** @minLength 6 */
+  password: string;
+}
+
+export interface MasterRecoveryInput {
+  /** @minLength 1 */
+  recoveryCode: string;
+  /** @minLength 8 */
+  newPassword: string;
 }
 
 export interface Building {
@@ -71,6 +127,8 @@ export interface Person {
   unitId: number;
   /** @nullable */
   unitRef?: string | null;
+  /** @nullable */
+  floor?: number | null;
   /** @nullable */
   buildingId?: number | null;
   /** @nullable */
@@ -256,6 +314,7 @@ export interface DashboardSummary {
   totalUnits: number;
   totalPersons: number;
   totalActualPaid: number;
+  totalActualDue: number;
   totalForecast: number;
   totalCancelled: number;
   collectionRate: number;
@@ -367,6 +426,8 @@ export interface AuditEntry {
   userId?: number | null;
   /** @nullable */
   username?: string | null;
+  /** @nullable */
+  actorRole?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: string;

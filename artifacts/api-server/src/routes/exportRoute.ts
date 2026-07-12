@@ -67,7 +67,7 @@ router.get("/export/charges", requireAuth, async (req, res) => {
       "المبلغ": parseFloat(r.amount),
       "النوع": r.type === "actual" ? "فعلي" : "توقعي",
       "الحالة": r.status === "paid" ? "مدفوع" : r.status === "cancelled" ? "ملغى" : "معلق",
-      "تاريخ الدفع": r.paidAt ? new Date(r.paidAt).toLocaleDateString("ar-SA") : "",
+      "تاريخ الدفع": r.paidAt ? new Date(r.paidAt).toLocaleDateString("ar-EG") : "",
       "ملاحظات": r.notes ?? "",
     }));
 

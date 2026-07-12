@@ -53,6 +53,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
       totalUnits: unitCount.count,
       totalPersons: personCount.count,
       totalActualPaid,
+      totalActualDue: totalActual,
       totalForecast,
       totalCancelled,
       collectionRate,

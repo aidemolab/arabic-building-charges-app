@@ -11,6 +11,7 @@ export interface DashboardSummary {
   totalUnits: number;
   totalPersons: number;
   totalActualPaid: number;
+  totalActualDue: number;
   totalForecast: number;
   totalCancelled: number;
   collectionRate: number;

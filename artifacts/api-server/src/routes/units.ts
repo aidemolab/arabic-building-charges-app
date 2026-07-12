@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, unitsTable, buildingsTable, personsTable } from "@workspace/db";
 import { eq, and, SQL } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { recordAudit } from "./auditHelper";
 
@@ -43,12 +43,12 @@ router.get("/units", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/units", requireAuth, async (req, res) => {
+router.post("/units", requireAuth, requireRole("admin"), async (req, res) => {
   const { buildingId, unitRef, floor, category, tier } = req.body;
   if (!buildingId || !unitRef) { res.status(400).json({ error: "buildingId and unitRef required" }); return; }
   try {
     const [u] = await db.insert(unitsTable).values({ buildingId, unitRef, floor: floor ?? null, category: category || null, tier: tier || null }).returning();
-    await recordAudit({ entityType: "unit", entityId: u.id, action: "create", newData: u, userId: (req.session as any).userId });
+    await recordAudit({ entityType: "unit", entityId: u.id, action: "create", newData: u, userId: req.authUser!.id });
     res.status(201).json({ id: u.id, buildingId: u.buildingId, buildingNameAr: null, unitRef: u.unitRef, floor: u.floor ?? null, category: u.category ?? null, tier: u.tier ?? null, archived: u.archived, createdAt: u.createdAt });
   } catch (err) {
     logger.error(err);
@@ -74,7 +74,7 @@ router.get("/units/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/units/:id", requireAuth, async (req, res) => {
+router.patch("/units/:id", requireAuth, requireRole("admin"), async (req, res) => {
   const id = parseInt(req.params.id as string);
   const { unitRef, floor, category, tier } = req.body;
   try {
@@ -86,7 +86,7 @@ router.patch("/units/:id", requireAuth, async (req, res) => {
     if (category !== undefined) updates.category = category;
     if (tier !== undefined) updates.tier = tier;
     const [u] = await db.update(unitsTable).set(updates).where(eq(unitsTable.id, id)).returning();
-    await recordAudit({ entityType: "unit", entityId: id, action: "update", oldData: old, newData: u, userId: (req.session as any).userId });
+    await recordAudit({ entityType: "unit", entityId: id, action: "update", oldData: old, newData: u, userId: req.authUser!.id });
     res.json({ id: u.id, buildingId: u.buildingId, buildingNameAr: null, unitRef: u.unitRef, floor: u.floor ?? null, category: u.category ?? null, tier: u.tier ?? null, archived: u.archived, createdAt: u.createdAt });
   } catch (err) {
     logger.error(err);
@@ -94,13 +94,13 @@ router.patch("/units/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/units/:id", requireAuth, async (req, res) => {
+router.delete("/units/:id", requireAuth, requireRole("admin"), async (req, res) => {
   const id = parseInt(req.params.id as string);
   try {
     const [old] = await db.select().from(unitsTable).where(eq(unitsTable.id, id)).limit(1);
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
     await db.update(unitsTable).set({ archived: true }).where(eq(unitsTable.id, id));
-    await recordAudit({ entityType: "unit", entityId: id, action: "archive", oldData: old, userId: (req.session as any).userId });
+    await recordAudit({ entityType: "unit", entityId: id, action: "archive", oldData: old, userId: req.authUser!.id });
     res.json({ ok: true });
   } catch (err) {
     logger.error(err);

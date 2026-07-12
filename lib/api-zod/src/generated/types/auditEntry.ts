@@ -20,6 +20,8 @@ export interface AuditEntry {
   /** @nullable */
   username?: string | null;
   /** @nullable */
+  actorRole?: string | null;
+  /** @nullable */
   notes?: string | null;
   createdAt: string;
 }

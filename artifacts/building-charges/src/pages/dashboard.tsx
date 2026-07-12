@@ -3,7 +3,6 @@ import {
   useGetDashboardSummary,
   useGetDashboardMonthly,
   useGetDashboardByBuilding,
-  useGetDashboardPaymentStatus,
   useListBuildings,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import {
   PieChart, Pie, Cell
 } from "recharts";
 import { ARABIC_MONTHS } from "@/lib/constants";
-import { TrendingUp, Building2, CheckCircle2, Clock, XCircle, Percent } from "lucide-react";
+import { TrendingUp, Building2, CheckCircle2, XCircle, Percent } from "lucide-react";
 
 const ACTUAL_COLOR = "#2563eb";
 const FORECAST_COLOR = "#94a3b8";
@@ -21,7 +20,7 @@ const FORECAST_COLOR = "#94a3b8";
 function formatCurrency(v: number | string | null | undefined) {
   if (v == null) return "—";
   const n = typeof v === "string" ? parseFloat(v) : v;
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ر.س";
+  return n.toLocaleString("ar-EG", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ج.م";
 }
 
 export default function DashboardPage() {
@@ -36,7 +35,6 @@ export default function DashboardPage() {
   const { data: summary } = useGetDashboardSummary(params);
   const { data: monthly } = useGetDashboardMonthly(params);
   const { data: byBuilding } = useGetDashboardByBuilding({ year });
-  const { data: paymentStatus } = useGetDashboardPaymentStatus(params);
   const { data: buildings } = useListBuildings();
 
   const monthlyByMonth: Record<number, { actual: number | null; forecast: number | null }> = {};
@@ -53,18 +51,19 @@ export default function DashboardPage() {
     توقعي: monthlyByMonth[i + 1]?.forecast ?? null,
   }));
 
-  const pieData = paymentStatus
-    ? [
-        { name: "مدفوع", value: paymentStatus.paidAmount ?? 0, color: "#22c55e" },
-        { name: "معلق", value: paymentStatus.pending ?? 0, color: "#f59e0b" },
-        { name: "ملغى", value: paymentStatus.cancelled ?? 0, color: "#ef4444" },
-      ].filter((d) => d.value > 0)
-    : [];
+  const collected = summary?.totalActualPaid ?? 0;
+  const target = summary?.totalActualDue ?? 0;
+  const collectionPct = target > 0 ? (collected / target) * 100 : 0;
+  const gaugeColor = collectionPct >= 80 ? "#22c55e" : collectionPct >= 50 ? "#f59e0b" : "#ef4444";
+  const gaugeData = [
+    { name: "محصّل", value: Math.min(collected, target), color: gaugeColor },
+    { name: "متبقٍ", value: Math.max(target - collected, 0), color: "#e5e7eb" },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">لوحة التحكم</h1>
+        <h1 className="text-2xl font-bold">لوحة البيانات</h1>
         <div className="flex gap-2">
           <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
             <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
@@ -146,9 +145,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={monthlyChartData} margin={{ top: 5, right: 0, left: 10, bottom: 0 }}>
+              <BarChart data={monthlyChartData} margin={{ top: 5, right: 8, left: 24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: "Cairo" }} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fontFamily: "Cairo" }}
+                  padding={{ left: 20, right: 12 }}
+                />
                 <YAxis tick={{ fontSize: 10 }} width={50} />
                 <Tooltip
                   formatter={(v: number) => [formatCurrency(v), ""]}
@@ -163,42 +166,60 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">حالة المدفوعات</CardTitle>
+            <CardTitle className="text-base">نسبة التحصيل</CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length > 0 ? (
+            {target > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={68}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v: number) => [formatCurrency(v), ""]}
-                      labelStyle={{ fontFamily: "Cairo" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1.5 mt-2">
-                  {pieData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span>{d.name}</span>
-                      </div>
-                      <span className="font-medium">{formatCurrency(d.value)}</span>
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={150}>
+                    <PieChart>
+                      <Pie
+                        data={gaugeData}
+                        cx="50%"
+                        cy="90%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius={62}
+                        outerRadius={92}
+                        cornerRadius={4}
+                        dataKey="value"
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        {gaugeData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
+                    <span className="text-3xl font-bold" style={{ color: gaugeColor }}>
+                      {Math.round(collectionPct)}%
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">نسبة التحصيل</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5 mt-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300" />
+                      <span>المستهدف (المطلوب تحصيله)</span>
                     </div>
-                  ))}
+                    <span className="font-semibold">{formatCurrency(target)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: gaugeColor }}
+                      />
+                      <span>المحصّل فعلياً</span>
+                    </div>
+                    <span className="font-semibold" style={{ color: gaugeColor }}>
+                      {formatCurrency(collected)}
+                    </span>
+                  </div>
                 </div>
               </>
             ) : (

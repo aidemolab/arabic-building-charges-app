@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CreditCard, Plus, XCircle, Loader2, Download, Filter } from "lucide-react";
 import { ARABIC_MONTHS, STATUS_LABELS, TYPE_LABELS, ROLE_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/lib/permissions";
 
 type ChargeType = "actual" | "forecast";
 type ChargeStatus = "pending" | "paid" | "cancelled";
@@ -30,7 +31,7 @@ function statusColor(status: string) {
 function formatCurrency(v: number | string | null | undefined) {
   if (v == null) return "—";
   const n = typeof v === "string" ? parseFloat(v) : v;
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ر.س";
+  return n.toLocaleString("ar-EG", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ج.م";
 }
 
 function ChargeForm({
@@ -122,7 +123,7 @@ function ChargeForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>المبلغ (ر.س)</Label>
+          <Label>المبلغ (ج.م)</Label>
           <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" dir="ltr" />
         </div>
         <div className="space-y-1.5">
@@ -224,6 +225,7 @@ function CancelDialog({
 
 export default function ChargesPage() {
   const queryClient = useQueryClient();
+  const { canManageCharges } = usePermissions();
   const [filterBuilding, setFilterBuilding] = useState("all");
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterYear, setFilterYear] = useState("2026");
@@ -270,9 +272,11 @@ export default function ChargesPage() {
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 ml-2" /> تصدير Excel
           </Button>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 ml-2" /> إضافة رسم
-          </Button>
+          {canManageCharges && (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 ml-2" /> إضافة رسم
+            </Button>
+          )}
         </div>
       </div>
 
@@ -410,7 +414,7 @@ export default function ChargesPage() {
                           </span>
                         </td>
                         <td className="py-2 px-3">
-                          {c.status !== "cancelled" && (
+                          {canManageCharges && c.status !== "cancelled" && (
                             <div className="flex gap-1 justify-end">
                               {c.status === "pending" && (
                                 <Button

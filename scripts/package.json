@@ -5,10 +5,22 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "migrate-admin-to-supabase": "tsx ./src/migrate-admin-to-supabase.ts",
+    "check-auth-signup-disabled": "tsx ./src/check-auth-signup-disabled.ts",
+    "check-postgrest-locked-down": "tsx ./src/check-postgrest-locked-down.ts",
+    "check-history-clean": "tsx ./src/check-history-clean.ts",
+    "configure-auth-redirect-urls": "tsx ./src/configure-auth-redirect-urls.ts",
+    "flag-admin-password-change": "tsx ./src/flag-admin-password-change.ts",
+    "reset-admin-password": "tsx ./src/reset-admin-password.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
+    "@workspace/db": "workspace:*",
+    "@workspace/supabase-auth-config": "workspace:*"
   }
 }

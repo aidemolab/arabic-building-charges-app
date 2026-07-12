@@ -1,38 +1,48 @@
-import { useGetMe, useLogout } from "@workspace/api-client-react";
+import { useGetMe } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Building2, Home, Users, CreditCard,
-  Upload, ClipboardList, LogOut, Menu, X
+  Upload, ClipboardList, LogOut, Menu, X, KeyRound, UserCog
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 const navItems = [
-  { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
+  { href: "/", label: "لوحة البيانات", icon: LayoutDashboard },
   { href: "/charges", label: "الرسوم والمدفوعات", icon: CreditCard },
   { href: "/buildings", label: "المباني", icon: Building2 },
   { href: "/units", label: "الوحدات", icon: Home },
   { href: "/persons", label: "الملاك والمستأجرون", icon: Users },
-  { href: "/import", label: "استيراد Excel", icon: Upload },
   { href: "/audit", label: "سجل التدقيق", icon: ClipboardList },
 ];
 
+const importNavItem = { href: "/import", label: "استيراد Excel", icon: Upload };
+
+const adminNavItems = [
+  { href: "/users", label: "المستخدمون", icon: UserCog },
+];
+
+const roleLabels: Record<string, string> = {
+  admin: "مدير",
+  accountant: "محاسب",
+  viewer: "مشاهد",
+};
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { data: user } = useGetMe();
-  const logoutMutation = useLogout();
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
-  const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        queryClient.clear();
-        window.location.href = "/login";
-      },
-    });
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    queryClient.clear();
+    window.location.href = "/login";
   };
 
   const SidebarContent = () => (
@@ -43,14 +53,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Building2 className="h-5 w-5 text-sidebar-foreground" />
           </div>
           <div>
-            <p className="font-bold text-sidebar-foreground text-sm">نظام رسوم المبنى</p>
+            <p className="font-bold text-sidebar-foreground text-sm">نظام إدارة كمبوند الصفوة</p>
             <p className="text-xs text-sidebar-foreground/70">إدارة الرسوم والمدفوعات</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
+        {[
+          ...navItems,
+          ...(user?.role === "admin" || user?.role === "accountant" ? [importNavItem] : []),
+          ...(user?.role === "admin" ? adminNavItems : []),
+        ].map((item) => {
           const Icon = item.icon;
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
           return (
@@ -76,9 +90,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between px-3 py-2 mb-1">
           <span className="text-xs text-sidebar-foreground/70">{user?.username}</span>
           <span className="text-xs bg-white/20 text-sidebar-foreground px-1.5 py-0.5 rounded">
-            {user?.role === "admin" ? "مدير" : "مستخدم"}
+            {roleLabels[user?.role ?? ""] ?? "مستخدم"}
           </span>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-sidebar-foreground/80 hover:bg-white/10 hover:text-sidebar-foreground"
+          onClick={() => {
+            setMobileOpen(false);
+            setPasswordDialogOpen(true);
+          }}
+        >
+          <KeyRound className="h-4 w-4 ml-2" />
+          تغيير كلمة المرور
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -118,13 +144,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
-          <span className="font-bold text-sm">نظام رسوم المبنى</span>
+          <span className="font-bold text-sm">نظام إدارة كمبوند الصفوة</span>
           <Building2 className="h-5 w-5" />
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </div>
+
+      <ChangePasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
     </div>
   );
 }

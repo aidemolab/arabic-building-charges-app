@@ -26,8 +26,29 @@ if (!basePath) {
   );
 }
 
+// Read the Supabase project URL from the SUPABASE_URL secret.
+function resolveSupabaseUrl(): string {
+  const raw = (process.env.SUPABASE_URL ?? "").trim();
+  if (!/^https?:\/\//i.test(raw)) {
+    throw new Error(
+      "SUPABASE_URL must be the Supabase project URL (https://<project-ref>.supabase.co)",
+    );
+  }
+  return raw.replace(/\/+$/, "");
+}
+
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseAnonKey) {
+  throw new Error("SUPABASE_ANON_KEY environment variable is required.");
+}
+
 export default defineConfig({
   base: basePath,
+  define: {
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(resolveSupabaseUrl()),
+    "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(supabaseAnonKey),
+  },
   plugins: [
     react(),
     tailwindcss(),

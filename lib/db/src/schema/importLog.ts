@@ -14,7 +14,7 @@ export const importLogTable = pgTable("import_log", {
   userId: integer("user_id"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const insertImportLogSchema = createInsertSchema(importLogTable).omit({ id: true, createdAt: true });
 export type InsertImportLog = z.infer<typeof insertImportLogSchema>;

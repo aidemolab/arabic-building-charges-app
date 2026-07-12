@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Pencil, Archive, Loader2, Search } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/constants";
+import { usePermissions } from "@/lib/permissions";
 
 function PersonForm({
   initial,
@@ -66,7 +67,7 @@ function PersonForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>الدور</Label>
+          <Label>الصفة</Label>
           <Select value={role} onValueChange={(v) => setRole(v as "owner" | "tenant")}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -101,9 +102,11 @@ function PersonForm({
 
 export default function PersonsPage() {
   const queryClient = useQueryClient();
+  const { canManageStructure } = usePermissions();
   const [filterBuilding, setFilterBuilding] = useState<string>("all");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [searchName, setSearchName] = useState("");
+  const [searchUnit, setSearchUnit] = useState("");
   const { data: buildings } = useListBuildings();
   const { data: persons, isLoading } = useListPersons({
     ...(filterBuilding !== "all" ? { buildingId: parseInt(filterBuilding) } : {}),
@@ -119,15 +122,25 @@ export default function PersonsPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/persons"] });
 
+  const visiblePersons = persons?.filter((p) => {
+    if (p.archived) return false;
+    if (searchUnit && !p.unitRef?.toLowerCase().includes(searchUnit.toLowerCase())) return false;
+    return true;
+  });
+
+  const colCount = canManageStructure ? 7 : 6;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" /> الملاك والمستأجرون
         </h1>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 ml-2" /> إضافة شخص
-        </Button>
+        {canManageStructure && (
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 ml-2" /> إضافة شخص
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -138,6 +151,15 @@ export default function PersonsPage() {
             placeholder="بحث بالاسم..."
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
+          />
+        </div>
+        <div className="relative">
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pr-8 w-36"
+            placeholder="رقم الوحدة..."
+            value={searchUnit}
+            onChange={(e) => setSearchUnit(e.target.value)}
           />
         </div>
         <Select value={filterBuilding} onValueChange={setFilterBuilding}>
@@ -169,14 +191,16 @@ export default function PersonsPage() {
                 <thead>
                   <tr className="border-b bg-muted/30">
                     <th className="text-right py-3 px-4 font-medium">الاسم</th>
+                    <th className="text-right py-3 px-4 font-medium">الصفة</th>
+                    <th className="text-right py-3 px-4 font-medium">المبنى</th>
+                    <th className="text-right py-3 px-4 font-medium">الوحدة</th>
                     <th className="text-right py-3 px-4 font-medium">الدور</th>
-                    <th className="text-right py-3 px-4 font-medium">المبنى / الوحدة</th>
                     <th className="text-right py-3 px-4 font-medium">رقم الجوال</th>
-                    <th className="py-3 px-4" />
+                    {canManageStructure && <th className="py-3 px-4" />}
                   </tr>
                 </thead>
                 <tbody>
-                  {persons?.filter((p) => !p.archived).map((p) => (
+                  {visiblePersons?.map((p) => (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                       <td className="py-2.5 px-4 font-medium">{p.nameAr}</td>
                       <td className="py-2.5 px-4">
@@ -185,33 +209,40 @@ export default function PersonsPage() {
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-muted-foreground text-xs">
-                        {p.buildingNameAr && <span>{p.buildingNameAr}</span>}
-                        {p.unitRef && <span className="font-mono mr-1">({p.unitRef})</span>}
+                        {p.buildingNameAr ?? "—"}
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-xs">
+                        {p.unitRef ?? "—"}
+                      </td>
+                      <td className="py-2.5 px-4 text-muted-foreground text-center">
+                        {p.floor != null ? p.floor : "—"}
                       </td>
                       <td className="py-2.5 px-4 text-muted-foreground" dir="ltr">{p.phone ?? "—"}</td>
-                      <td className="py-2.5 px-4">
-                        <div className="flex gap-1 justify-end">
-                          <Button size="sm" variant="ghost" onClick={() => setEditing(p)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm" variant="ghost"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              if (confirm("أرشفة هذا الشخص؟")) {
-                                archiveMutation.mutate({ id: p.id }, { onSuccess: invalidate });
-                              }
-                            }}
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
+                      {canManageStructure && (
+                        <td className="py-2.5 px-4">
+                          <div className="flex gap-1 justify-end">
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(p)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("أرشفة هذا الشخص؟")) {
+                                  archiveMutation.mutate({ id: p.id }, { onSuccess: invalidate });
+                                }
+                              }}
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
-                  {persons?.filter((p) => !p.archived).length === 0 && (
+                  {visiblePersons?.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-muted-foreground">
+                      <td colSpan={colCount} className="text-center py-10 text-muted-foreground">
                         لا توجد نتائج
                       </td>
                     </tr>

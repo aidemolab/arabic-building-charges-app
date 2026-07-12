@@ -1,3 +1,12 @@
 - [Safwa workbook layout](safwa-workbook-layout.md) — client Excel has 4 towers + shops in one sheet with tatweel headers, الإجمالى rows and collection sections to skip; carry-forward unit refs.
 - [GitHub push auth](github-push-auth.md) — if git push fails with "Invalid username or token", use the GitHub connector token from the credential proxy, not replit-git-askpass.
-- [GitHub sync](github-sync.md) — never push local branch history (contains pre-scrub client data); always use `bash scripts/sync-github.sh` snapshot push.
+- [GitHub sync](github-sync.md) — workbook purge only sticks if run in the main app repo (task-env purges are undone by rebase); always use `bash scripts/sync-github.sh` snapshot push, never raw push.
+- [Supabase auth config](supabase-auth-config.md) — SUPABASE_URL secret holds a pooler conn string; use resolveSupabaseUrl(); public signups disabled via Management API (SUPABASE_ACCESS_TOKEN).
+- [drizzle-orm peer variants](drizzle-peer-variants.md) — never add drizzle-orm to a package without pg/@types/pg; import `eq` from @workspace/db instead.
+- [Drizzle push against Supabase](drizzle-supabase-push.md) — drizzle schema models live DB incl. RLS policies; never push --force, read --verbose diff first.
+- [Profiles/current_app_role removed](profiles-cleanup.md) — legacy Supabase role island (profiles + current_app_role + auth trigger) dropped; roles live in local users table, never re-add.
+- [Orval zod codegen limits](orval-zod-codegen.md) — `format: email` in the OpenAPI spec breaks api-zod codegen (zod 3.25 has no z.email()); validate format in handlers instead.
+- [Supabase password recovery](supabase-password-recovery.md) — reset-email redirects silently fall back to Site URL unless the domain is in the uri_allow_list; re-run configure-auth-redirect-urls after domain changes.
+- [Playwright e2e setup](playwright-e2e.md) — browser needs Nix system libs (replit.nix); specs run against live workflows via localhost:80; e2e Supabase accounts use `e2e-pw-` prefix + teardown purge.
+- [DB/auth inspection](db-inspection.md) — executeSql/built-in Postgres is stale/unused; query real rows via SUPABASE_DATABASE_URL and auth state via supabase-js (run from artifacts/api-server).
+- [Admin account verification pitfall](admin-account-verification.md) — never re-rotate the live admin password in diagnostic scripts after a user recovery; it locks them out. Read the forced-change flag via getUser() (fresh), not getSession()/JWT (stale).

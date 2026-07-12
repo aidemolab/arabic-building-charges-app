@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LoginInput {
-  username: string;
-  password: string;
+export interface MasterRecoveryInput {
+  /** @minLength 1 */
+  recoveryCode: string;
+  /** @minLength 8 */
+  newPassword: string;
 }

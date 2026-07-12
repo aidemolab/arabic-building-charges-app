@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, chargesTable, unitsTable, buildingsTable, personsTable } from "@workspace/db";
 import { eq, and, like, SQL } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireRole } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { recordAudit } from "./auditHelper";
 
@@ -91,7 +91,7 @@ router.get("/charges", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/charges", requireAuth, async (req, res) => {
+router.post("/charges", requireAuth, requireRole("admin", "accountant"), async (req, res) => {
   const { unitId, personId, year, month, amount, type, status, paidAt, notes } = req.body;
   if (!unitId || !personId || !year || !month || amount === undefined || !type) {
     res.status(400).json({ error: "Required fields missing" });
@@ -104,7 +104,7 @@ router.post("/charges", requireAuth, async (req, res) => {
       paidAt: paidAt ? new Date(paidAt) : null,
       notes: notes || null,
     }).returning();
-    await recordAudit({ entityType: "charge", entityId: c.id, action: "create", newData: c, userId: (req.session as any).userId });
+    await recordAudit({ entityType: "charge", entityId: c.id, action: "create", newData: c, userId: req.authUser!.id });
     const [full] = await db.select(chargeFields()).from(chargesTable).leftJoin(unitsTable, eq(chargesTable.unitId, unitsTable.id)).leftJoin(buildingsTable, eq(unitsTable.buildingId, buildingsTable.id)).leftJoin(personsTable, eq(chargesTable.personId, personsTable.id)).where(eq(chargesTable.id, c.id)).limit(1);
     res.status(201).json(formatCharge(full));
   } catch (err) {
@@ -125,7 +125,7 @@ router.get("/charges/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/charges/:id", requireAuth, async (req, res) => {
+router.patch("/charges/:id", requireAuth, requireRole("admin", "accountant"), async (req, res) => {
   const id = parseInt(req.params.id as string);
   const { amount, status, paidAt, notes, type } = req.body;
   try {
@@ -138,7 +138,7 @@ router.patch("/charges/:id", requireAuth, async (req, res) => {
     if (notes !== undefined) updates.notes = notes;
     if (type !== undefined) updates.type = type;
     await db.update(chargesTable).set(updates).where(eq(chargesTable.id, id));
-    await recordAudit({ entityType: "charge", entityId: id, action: "update", oldData: old, newData: { ...old, ...updates }, userId: (req.session as any).userId });
+    await recordAudit({ entityType: "charge", entityId: id, action: "update", oldData: old, newData: { ...old, ...updates }, userId: req.authUser!.id });
     const [full] = await db.select(chargeFields()).from(chargesTable).leftJoin(unitsTable, eq(chargesTable.unitId, unitsTable.id)).leftJoin(buildingsTable, eq(unitsTable.buildingId, buildingsTable.id)).leftJoin(personsTable, eq(chargesTable.personId, personsTable.id)).where(eq(chargesTable.id, id)).limit(1);
     res.json(formatCharge(full));
   } catch (err) {
@@ -147,7 +147,7 @@ router.patch("/charges/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/charges/:id/cancel", requireAuth, async (req, res) => {
+router.post("/charges/:id/cancel", requireAuth, requireRole("admin", "accountant"), async (req, res) => {
   const id = parseInt(req.params.id as string);
   const { reason } = req.body;
   if (!reason) { res.status(400).json({ error: "reason required" }); return; }
@@ -156,7 +156,7 @@ router.post("/charges/:id/cancel", requireAuth, async (req, res) => {
     if (!old) { res.status(404).json({ error: "Not found" }); return; }
     if (old.status === "cancelled") { res.status(400).json({ error: "Already cancelled" }); return; }
     await db.update(chargesTable).set({ status: "cancelled", cancelReason: reason }).where(eq(chargesTable.id, id));
-    await recordAudit({ entityType: "charge", entityId: id, action: "cancel", oldData: old, newData: { status: "cancelled", cancelReason: reason }, userId: (req.session as any).userId, notes: reason });
+    await recordAudit({ entityType: "charge", entityId: id, action: "cancel", oldData: old, newData: { status: "cancelled", cancelReason: reason }, userId: req.authUser!.id, notes: reason });
     const [full] = await db.select(chargeFields()).from(chargesTable).leftJoin(unitsTable, eq(chargesTable.unitId, unitsTable.id)).leftJoin(buildingsTable, eq(unitsTable.buildingId, buildingsTable.id)).leftJoin(personsTable, eq(chargesTable.personId, personsTable.id)).where(eq(chargesTable.id, id)).limit(1);
     res.json(formatCharge(full));
   } catch (err) {

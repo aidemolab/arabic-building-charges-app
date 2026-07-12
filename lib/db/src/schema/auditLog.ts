@@ -12,7 +12,7 @@ export const auditLogTable = pgTable("audit_log", {
   userId: integer("user_id"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const insertAuditLogSchema = createInsertSchema(auditLogTable).omit({ id: true, createdAt: true });
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

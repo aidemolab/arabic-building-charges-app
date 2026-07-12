@@ -13,6 +13,8 @@ export interface Person {
   /** @nullable */
   unitRef?: string | null;
   /** @nullable */
+  floor?: number | null;
+  /** @nullable */
   buildingId?: number | null;
   /** @nullable */
   buildingNameAr?: string | null;

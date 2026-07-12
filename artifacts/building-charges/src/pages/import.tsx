@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, RotateCcw } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, RotateCcw, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/lib/permissions";
 
 const MONTH_COLS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"] as const;
 const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 export default function ImportPage() {
   const queryClient = useQueryClient();
+  const { canImport } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -68,6 +70,26 @@ export default function ImportPage() {
     setCommitted(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  if (!canImport) {
+    return (
+      <div className="space-y-4 max-w-5xl">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Upload className="h-6 w-6" /> استيراد Excel
+          </h1>
+        </div>
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center gap-3 text-center">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              ليس لديك صلاحية لاستيراد البيانات. يقتصر الاستيراد على المدير والمحاسب.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-5xl">
@@ -245,7 +267,7 @@ export default function ImportPage() {
                               "py-2 px-2 text-left tabular-nums",
                               mi < 6 ? "text-blue-700" : "text-slate-500"
                             )}>
-                              {val != null ? val.toLocaleString("ar-SA") : "—"}
+                              {val != null ? val.toLocaleString("ar-EG") : "—"}
                             </td>
                           );
                         })}
