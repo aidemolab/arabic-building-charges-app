@@ -145,14 +145,25 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={monthlyChartData} margin={{ top: 5, right: 8, left: 24, bottom: 0 }}>
+              <BarChart data={monthlyChartData} margin={{ top: 5, right: 12, left: 16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="name"
                   tick={{ fontSize: 10, fontFamily: "Cairo" }}
-                  padding={{ left: 20, right: 12 }}
+                  padding={{ left: 28, right: 12 }}
                 />
-                <YAxis tick={{ fontSize: 10 }} width={50} />
+                <YAxis
+                  tick={{ fontSize: 10, fontFamily: "Cairo" }}
+                  width={78}
+                  tickMargin={8}
+                  tickFormatter={(v: number) => v.toLocaleString("ar-EG")}
+                  label={{
+                    value: "المبلغ (ج.م)",
+                    angle: -90,
+                    position: "insideLeft",
+                    style: { fontSize: 11, fontFamily: "Cairo", fill: "#64748b", textAnchor: "middle" },
+                  }}
+                />
                 <Tooltip
                   formatter={(v: number) => [formatCurrency(v), ""]}
                   labelStyle={{ fontFamily: "Cairo", direction: "rtl" }}
@@ -204,7 +215,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300" />
-                      <span>المستهدف (المطلوب تحصيله)</span>
+                      <span>إجمالي المبلغ المستحق</span>
                     </div>
                     <span className="font-semibold">{formatCurrency(target)}</span>
                   </div>
@@ -214,7 +225,7 @@ export default function DashboardPage() {
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ background: gaugeColor }}
                       />
-                      <span>المحصّل فعلياً</span>
+                      <span>إجمالي المبلغ المحصل</span>
                     </div>
                     <span className="font-semibold" style={{ color: gaugeColor }}>
                       {formatCurrency(collected)}

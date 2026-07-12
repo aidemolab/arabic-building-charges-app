@@ -10,3 +10,4 @@
 - [Playwright e2e setup](playwright-e2e.md) — browser needs Nix system libs (replit.nix); specs run against live workflows via localhost:80; e2e Supabase accounts use `e2e-pw-` prefix + teardown purge.
 - [DB/auth inspection](db-inspection.md) — executeSql/built-in Postgres is stale/unused; query real rows via SUPABASE_DATABASE_URL and auth state via supabase-js (run from artifacts/api-server).
 - [Admin account verification pitfall](admin-account-verification.md) — never re-rotate the live admin password in diagnostic scripts after a user recovery; it locks them out. Read the forced-change flag via getUser() (fresh), not getSession()/JWT (stale).
+- [Dashboard collection metric](dashboard-collection-metric.md) — نسبة التحصيل expected/due = Σ(units.tier grade × actual months), NOT paid+pending; same rule in summary + by-building. Grade is the only per-unit "required" fee.

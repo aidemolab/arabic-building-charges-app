@@ -17,6 +17,24 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
     );
     const [personCount] = await db.select({ count: sql<number>`count(*)::int` }).from(personsTable).where(eq(personsTable.archived, false));
 
+    // Expected/required amount: each non-archived unit owes its monthly grade (الدرجة / tier)
+    // for every actual-charge month. Units without a grade contribute 0. This is the FULL
+    // amount that should have been collected if every unit paid its required monthly fee,
+    // independent of whether a charge row exists — so never-charged units lower the rate.
+    const actualMonthsCount = 6;
+    const [expectedAgg] = await db
+      .select({
+        gradeSum: sql<string>`coalesce(sum(nullif(${unitsTable.tier}, '')::numeric), 0)`,
+      })
+      .from(unitsTable)
+      .where(
+        and(
+          eq(unitsTable.archived, false),
+          buildingId ? eq(unitsTable.buildingId, buildingId) : undefined,
+        ) as SQL,
+      );
+    const totalActualDue = parseFloat(expectedAgg?.gradeSum || "0") * actualMonthsCount;
+
     const conditions: (SQL | undefined)[] = [
       eq(chargesTable.archived, false),
       eq(chargesTable.year, year),
@@ -36,28 +54,26 @@ router.get("/dashboard/summary", requireAuth, async (req, res) => {
       .where(and(...conditions) as SQL)
       .groupBy(chargesTable.type, chargesTable.status);
 
-    let totalActualPaid = 0, totalForecast = 0, totalCancelled = 0, totalActualPending = 0;
+    let totalActualPaid = 0, totalForecast = 0, totalCancelled = 0;
     for (const row of chargeAgg) {
       const amt = parseFloat(row.total || "0");
       if (row.type === "actual" && row.status === "paid") totalActualPaid += amt;
-      if (row.type === "actual" && row.status === "pending") totalActualPending += amt;
       if (row.type === "forecast") totalForecast += amt;
       if (row.status === "cancelled") totalCancelled += amt;
     }
 
-    const totalActual = totalActualPaid + totalActualPending;
-    const collectionRate = totalActual > 0 ? Math.round((totalActualPaid / totalActual) * 100) : 0;
+    const collectionRate = totalActualDue > 0 ? Math.round((totalActualPaid / totalActualDue) * 100) : 0;
 
     res.json({
       totalBuildings: buildingCount.count,
       totalUnits: unitCount.count,
       totalPersons: personCount.count,
       totalActualPaid,
-      totalActualDue: totalActual,
+      totalActualDue,
       totalForecast,
       totalCancelled,
       collectionRate,
-      actualMonthsCount: 6,
+      actualMonthsCount,
       forecastMonthsCount: 6,
     });
   } catch (err) {
@@ -121,8 +137,15 @@ router.get("/dashboard/by-building", requireAuth, async (req, res) => {
 
     const buildings = await db.select().from(buildingsTable).where(eq(buildingsTable.archived, false));
 
+    const actualMonthsCount = 6;
     const results = await Promise.all(buildings.map(async (b) => {
-      const [unitCount] = await db.select({ count: sql<number>`count(*)::int` }).from(unitsTable).where(and(eq(unitsTable.buildingId, b.id), eq(unitsTable.archived, false)));
+      const [unitAgg] = await db
+        .select({
+          count: sql<number>`count(*)::int`,
+          gradeSum: sql<string>`coalesce(sum(nullif(${unitsTable.tier}, '')::numeric), 0)`,
+        })
+        .from(unitsTable)
+        .where(and(eq(unitsTable.buildingId, b.id), eq(unitsTable.archived, false)));
       const [personCount] = await db.select({ count: sql<number>`count(distinct ${personsTable.id})::int` }).from(personsTable).leftJoin(unitsTable, eq(personsTable.unitId, unitsTable.id)).where(and(eq(unitsTable.buildingId, b.id), eq(personsTable.archived, false)));
 
       const chargeAgg = await db
@@ -132,21 +155,24 @@ router.get("/dashboard/by-building", requireAuth, async (req, res) => {
         .where(and(eq(unitsTable.buildingId, b.id), eq(chargesTable.year, year), eq(chargesTable.archived, false)))
         .groupBy(chargesTable.type, chargesTable.status);
 
-      let totalActualPaid = 0, totalActual = 0, totalForecast = 0;
+      let totalActualPaid = 0, totalForecast = 0;
       for (const row of chargeAgg) {
         const amt = parseFloat(row.total || "0");
-        if (row.type === "actual") { totalActual += amt; if (row.status === "paid") totalActualPaid += amt; }
+        if (row.type === "actual" && row.status === "paid") totalActualPaid += amt;
         if (row.type === "forecast") totalForecast += amt;
       }
+
+      // Same grade-based expected as the summary gauge: units × grade × actual months.
+      const totalActualDue = parseFloat(unitAgg?.gradeSum || "0") * actualMonthsCount;
 
       return {
         buildingId: b.id,
         buildingNameAr: b.nameAr,
-        totalUnits: unitCount.count,
+        totalUnits: unitAgg.count,
         totalPersons: personCount.count,
         totalActual: totalActualPaid,
         totalForecast,
-        collectionRate: totalActual > 0 ? Math.round((totalActualPaid / totalActual) * 100) : 0,
+        collectionRate: totalActualDue > 0 ? Math.round((totalActualPaid / totalActualDue) * 100) : 0,
       };
     }));
 
